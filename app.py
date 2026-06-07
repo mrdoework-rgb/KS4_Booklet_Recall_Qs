@@ -61,8 +61,15 @@ def process_template(template_file, json_data):
         # Deep copy from the original stored template table XML
         new_tbl_xml = copy.deepcopy(original_template_xml)
         
-        # Append the table XML to the document body
-        doc.element.body.append(new_tbl_xml)
+
+        # Safely insert the table XML into the document body BEFORE the section properties
+        sect_pr = doc.element.body.xpath('./w:sectPr')
+        if sect_pr:
+            # Insert the table right before the section properties tag
+            sect_pr[0].addprevious(new_tbl_xml)
+        else:
+            # Fallback just in case the document structure is non-standard
+            doc.element.body.append(new_tbl_xml)
         
         # Create a Table object directly from the XML element we just appended
         # This avoids relying on doc.tables[-1] which may consolidate tables
