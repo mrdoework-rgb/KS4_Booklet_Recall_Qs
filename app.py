@@ -43,15 +43,10 @@ def process_template(template_file, json_data):
     # 2. Iterate through the JSON sections to create a new table for each
     sections = json_data.get("revision_sections", [])
 
-    for section in sections:
+    for section_idx, section in enumerate(sections):
         # Deep copy the entire template table XML and append it to the document body
         new_tbl_xml = copy.deepcopy(template_table._tbl)
         doc.element.body.append(new_tbl_xml)
-        
-        # Add a paragraph with a single line separator between tables
-        separator = doc.add_paragraph()
-        separator.paragraph_format.space_before = Pt(6)
-        separator.paragraph_format.space_after = Pt(6)
 
         # The newly appended table is now the last one in doc.tables
         new_table = doc.tables[-1]
@@ -100,6 +95,12 @@ def process_template(template_file, json_data):
                         replace_text_in_cell(cell, "$prompt$", prompt_text)
                         replace_text_in_cell(cell, "$answer_space$", answer_text)
 
+        # Add a single line gap between tables (except after the last section)
+        if section_idx < len(sections) - 1:
+            separator = doc.add_paragraph()
+            separator.paragraph_format.space_before = Pt(6)
+            separator.paragraph_format.space_after = Pt(6)
+
     # 4. Remove the original template table from the document to clean it up
     template_table._element.getparent().remove(template_table._element)
 
@@ -112,12 +113,11 @@ def process_template(template_file, json_data):
 
 def get_available_templates():
     """
-    Get list of available template files in the repository.
+    Get list of available template files (.docx) in the repository root.
     """
-    template_dir = Path("templates")
-    if template_dir.exists():
-        return sorted([f.name for f in template_dir.glob("*.docx")])
-    return []
+    current_dir = Path(".")
+    docx_files = sorted([f.name for f in current_dir.glob("*.docx")])
+    return docx_files
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Revision Template Generator", layout="centered")
@@ -140,9 +140,9 @@ if use_repository_template:
         selected_template = st.selectbox(
             "Select a template from the repository",
             available_templates,
-            help="Available templates in the templates/ directory"
+            help="Available templates in the repository root"
         )
-        template_path = Path("templates") / selected_template
+        template_path = Path(selected_template)
         try:
             with open(template_path, "rb") as f:
                 template_file = BytesIO(f.read())
@@ -150,7 +150,7 @@ if use_repository_template:
         except Exception as e:
             st.error(f"Error loading template: {e}")
     else:
-        st.warning("No templates found in the templates/ directory. Please upload a template instead.")
+        st.warning("No .docx template files found in the repository root. Please upload a template instead.")
         use_repository_template = False
 
 if not use_repository_template:
