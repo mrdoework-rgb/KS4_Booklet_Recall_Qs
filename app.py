@@ -45,7 +45,7 @@ def process_template(template_file, json_data):
     for section_idx, section in enumerate(sections):
         # Add a paragraph with text before adding a new table (except for the first table)
         if section_idx > 0:
-            doc.add_paragraph("BLANK LINE")
+            separator_para = doc.add_paragraph("BLANK LINE")
         
         # Deep copy the entire template table XML and append it to the document body
         new_tbl_xml = copy.deepcopy(template_table._tbl)
