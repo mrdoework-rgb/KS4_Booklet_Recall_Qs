@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import copy
 from docx import Document
+from docx.table import Table
 from io import BytesIO
 from pathlib import Path
 
@@ -14,6 +15,13 @@ def replace_text_in_cell(cell, old_text, new_text):
         if old_text in paragraph.text:
             # Replace the text within the paragraph
             paragraph.text = paragraph.text.replace(old_text, new_text)
+
+def get_table_from_tbl_element(tbl_element):
+    """
+    Create a Table object from a raw tbl XML element.
+    This lets us work with the table independently without relying on doc.tables.
+    """
+    return Table(tbl_element, None)
 
 def process_template(template_file, json_data):
     """
@@ -39,23 +47,26 @@ def process_template(template_file, json_data):
         st.error("Could not find a table containing '$sub_heading$' in the uploaded template.")
         return None
 
-    # Store a deep copy of the original template table XML before we start modifying
+    # Store a deep copy of the original template table XML
     original_template_xml = copy.deepcopy(template_table._tbl)
 
     # 2. Iterate through the JSON sections to create a new table for each
     sections = json_data.get("revision_sections", [])
 
     for section_idx, section in enumerate(sections):
-        # Add a paragraph with text before adding a new table (except for the first table)
+        # Add a paragraph separator before each new table (except the first)
         if section_idx > 0:
             doc.add_paragraph("BLANK LINE")
         
-        # Deep copy from the ORIGINAL stored template table XML (not the current one)
+        # Deep copy from the original stored template table XML
         new_tbl_xml = copy.deepcopy(original_template_xml)
+        
+        # Append the table XML to the document body
         doc.element.body.append(new_tbl_xml)
-
-        # The newly appended table is now the last one in doc.tables
-        new_table = doc.tables[-1]
+        
+        # Create a Table object directly from the XML element we just appended
+        # This avoids relying on doc.tables[-1] which may consolidate tables
+        new_table = Table(new_tbl_xml, doc)
 
         # Replace the $sub_heading$ tag in the new table
         for row in new_table.rows:
@@ -93,8 +104,11 @@ def process_template(template_file, json_data):
                 else:
                     # Duplicate the row XML for subsequent questions
                     new_row_xml = copy.deepcopy(original_row_xml)
-                    new_table._tbl.append(new_row_xml)
-                    new_row = new_table.rows[-1]
+                    new_tbl_xml.append(new_row_xml)
+
+                    # Create a temporary Table object to access the newly added row
+                    temp_table = Table(new_tbl_xml, doc)
+                    new_row = temp_table.rows[-1]
 
                     # Replace tags in the newly duplicated row
                     for cell in new_row.cells:
