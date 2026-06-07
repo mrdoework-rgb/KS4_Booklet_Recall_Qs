@@ -42,7 +42,11 @@ def process_template(template_file, json_data):
     # 2. Iterate through the JSON sections to create a new table for each
     sections = json_data.get("revision_sections", [])
 
-    for section in sections:
+    for section_idx, section in enumerate(sections):
+        # Add a line break before adding a new table (except for the first table)
+        if section_idx > 0:
+            doc.add_paragraph()
+        
         # Deep copy the entire template table XML and append it to the document body
         new_tbl_xml = copy.deepcopy(template_table._tbl)
         doc.element.body.append(new_tbl_xml)
