@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import copy
 from docx import Document
-from docx.shared import Pt
 from io import BytesIO
 from pathlib import Path
 
@@ -43,7 +42,7 @@ def process_template(template_file, json_data):
     # 2. Iterate through the JSON sections to create a new table for each
     sections = json_data.get("revision_sections", [])
 
-    for section_idx, section in enumerate(sections):
+    for section in sections:
         # Deep copy the entire template table XML and append it to the document body
         new_tbl_xml = copy.deepcopy(template_table._tbl)
         doc.element.body.append(new_tbl_xml)
@@ -94,11 +93,6 @@ def process_template(template_file, json_data):
                     for cell in new_row.cells:
                         replace_text_in_cell(cell, "$prompt$", prompt_text)
                         replace_text_in_cell(cell, "$answer_space$", answer_text)
-
-        # Add two blank lines AFTER each table (except the last one) for spacing between tables
-        if section_idx < len(sections) - 1:
-            doc.add_paragraph()
-            doc.add_paragraph()
 
     # 4. Remove the original template table from the document to clean it up
     template_table._element.getparent().remove(template_table._element)
