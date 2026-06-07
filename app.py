@@ -116,7 +116,8 @@ def process_template(template_file, json_data):
                         replace_text_in_cell(cell, "$answer_space$", answer_text)
 
     # 4. Remove the original template table from the document to clean it up
-    template_table._element.getparent().remove(template_table._element)
+    # COMMENTED OUT FOR VISUALIZATION
+    # template_table._element.getparent().remove(template_table._element)
 
     # 5. Save to a BytesIO object so Streamlit can offer it as a download
     output = BytesIO()
