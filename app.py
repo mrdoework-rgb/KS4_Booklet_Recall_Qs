@@ -95,11 +95,10 @@ def process_template(template_file, json_data):
                         replace_text_in_cell(cell, "$prompt$", prompt_text)
                         replace_text_in_cell(cell, "$answer_space$", answer_text)
 
-        # Add a single line gap between tables (except after the last section)
+        # Add two blank lines AFTER each table (except the last one) for spacing between tables
         if section_idx < len(sections) - 1:
-            separator = doc.add_paragraph()
-            separator.paragraph_format.space_before = Pt(6)
-            separator.paragraph_format.space_after = Pt(6)
+            doc.add_paragraph()
+            doc.add_paragraph()
 
     # 4. Remove the original template table from the document to clean it up
     template_table._element.getparent().remove(template_table._element)
