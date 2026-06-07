@@ -2,7 +2,9 @@ import streamlit as st
 import json
 import copy
 from docx import Document
+from docx.shared import Pt
 from io import BytesIO
+from pathlib import Path
 
 def replace_text_in_cell(cell, old_text, new_text):
     """
@@ -46,8 +48,10 @@ def process_template(template_file, json_data):
         new_tbl_xml = copy.deepcopy(template_table._tbl)
         doc.element.body.append(new_tbl_xml)
         
-        # Add an empty paragraph for spacing between tables
-        doc.add_paragraph()
+        # Add a paragraph with a single line separator between tables
+        separator = doc.add_paragraph()
+        separator.paragraph_format.space_before = Pt(6)
+        separator.paragraph_format.space_after = Pt(6)
 
         # The newly appended table is now the last one in doc.tables
         new_table = doc.tables[-1]
@@ -106,21 +110,61 @@ def process_template(template_file, json_data):
     
     return output
 
+def get_available_templates():
+    """
+    Get list of available template files in the repository.
+    """
+    template_dir = Path("templates")
+    if template_dir.exists():
+        return sorted([f.name for f in template_dir.glob("*.docx")])
+    return []
+
 # --- Streamlit UI ---
 st.set_page_config(page_title="Revision Template Generator", layout="centered")
 
 st.title("📄 Revision Template Generator")
 st.markdown("Upload your `.docx` template and paste your JSON data below to generate populated revision tables.")
 
-# File Uploader for Template
-uploaded_template = st.file_uploader("1. Upload your Template Recall.docx", type=["docx"])
+# Template Selection
+col1, col2 = st.columns(2)
+
+with col1:
+    use_repository_template = st.checkbox("Use template from repository", value=False)
+
+template_file = None
+
+if use_repository_template:
+    available_templates = get_available_templates()
+    
+    if available_templates:
+        selected_template = st.selectbox(
+            "Select a template from the repository",
+            available_templates,
+            help="Available templates in the templates/ directory"
+        )
+        template_path = Path("templates") / selected_template
+        try:
+            with open(template_path, "rb") as f:
+                template_file = BytesIO(f.read())
+                st.success(f"✓ Using: {selected_template}")
+        except Exception as e:
+            st.error(f"Error loading template: {e}")
+    else:
+        st.warning("No templates found in the templates/ directory. Please upload a template instead.")
+        use_repository_template = False
+
+if not use_repository_template:
+    # File Uploader for Template
+    uploaded_template = st.file_uploader("1. Upload your Template Recall.docx", type=["docx"])
+    if uploaded_template:
+        template_file = uploaded_template
 
 # Text Area for JSON
 json_input = st.text_area("2. Paste your JSON Data", height=300, placeholder='{"revision_sections": [...]}')
 
 if st.button("Generate Document", type="primary"):
-    if not uploaded_template:
-        st.warning("Please upload a Word document template.")
+    if not template_file:
+        st.warning("Please either select a repository template or upload a Word document template.")
     elif not json_input.strip():
         st.warning("Please paste your JSON data.")
     else:
@@ -130,7 +174,7 @@ if st.button("Generate Document", type="primary"):
             
             with st.spinner("Generating document..."):
                 # Process the document
-                output_docx = process_template(uploaded_template, parsed_json)
+                output_docx = process_template(template_file, parsed_json)
                 
                 if output_docx:
                     st.success("Document generated successfully!")
