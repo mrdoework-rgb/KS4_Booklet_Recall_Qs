@@ -39,16 +39,19 @@ def process_template(template_file, json_data):
         st.error("Could not find a table containing '$sub_heading$' in the uploaded template.")
         return None
 
+    # Store a deep copy of the original template table XML before we start modifying
+    original_template_xml = copy.deepcopy(template_table._tbl)
+
     # 2. Iterate through the JSON sections to create a new table for each
     sections = json_data.get("revision_sections", [])
 
     for section_idx, section in enumerate(sections):
         # Add a paragraph with text before adding a new table (except for the first table)
         if section_idx > 0:
-            separator_para = doc.add_paragraph("BLANK LINE")
+            doc.add_paragraph("BLANK LINE")
         
-        # Deep copy the entire template table XML and append it to the document body
-        new_tbl_xml = copy.deepcopy(template_table._tbl)
+        # Deep copy from the ORIGINAL stored template table XML (not the current one)
+        new_tbl_xml = copy.deepcopy(original_template_xml)
         doc.element.body.append(new_tbl_xml)
 
         # The newly appended table is now the last one in doc.tables
